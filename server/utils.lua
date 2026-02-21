@@ -1,3 +1,37 @@
+
+CreateThread(function()
+    Wait(1500)
+
+    if not Config.DiscordLogs then
+        print('[ps-adminmenu] DiscordLogs config missing. Logging disabled.')
+        return
+    end
+
+    if not Config.DiscordLogs.enabled then
+        print('[ps-adminmenu] Discord webhook logging is disabled (Config.DiscordLogs.enabled = false).')
+        return
+    end
+
+    local hasWebhook = false
+
+    if Config.DiscordLogs.webhook and Config.DiscordLogs.webhook ~= '' then
+        hasWebhook = true
+    end
+
+    if Config.DiscordLogs.webhooks then
+        for _, url in pairs(Config.DiscordLogs.webhooks) do
+            if url and url ~= '' then
+                hasWebhook = true
+                break
+            end
+        end
+    end
+
+    if not hasWebhook then
+        print('[ps-adminmenu] Discord logging enabled but no webhook URL configured. Set Config.DiscordLogs.webhook or Config.DiscordLogs.webhooks.<category>.')
+    end
+end)
+
 local function noPerms(source)
     QBCore.Functions.Notify(source, "You are not Admin or God.", 'error')
 end
