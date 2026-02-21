@@ -28,3 +28,19 @@ RegisterNetEvent('ps-adminmenu:server:ValidateCommand', function(command, perms)
         LogAdminAction('Main', 'ValidateCommand', src, src, { command = command, perms = perms })
     end
 end)
+
+
+RegisterNetEvent('ps-adminmenu:server:LogMenuAction', function(key, selectedData)
+    local src = source
+    local actionData = CheckDataFromKey(key)
+
+    if not actionData then return end
+    if actionData.perms and not QBCore.Functions.HasPermission(src, actionData.perms) then return end
+
+    LogAdminAction('Actions', 'MenuAction', src, src, {
+        key = key,
+        event = actionData.event,
+        type = actionData.type,
+        selectedData = selectedData
+    })
+end)

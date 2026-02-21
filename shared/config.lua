@@ -8,21 +8,35 @@ Config.RenewedPhone = false    -- if you use qb-phone from renewed. (multijob)
 
 Config.DiscordLogs = {
     enabled = false, -- set true once webhook is configured
-    webhook = '', -- your discord webhook URL
+    webhook = '', -- legacy fallback webhook URL (used if per-category webhook is not set)
     username = 'ps-adminmenu',
     avatarUrl = '',
     color = 16724736,
+    webhooks = {
+        default = '',
+        actions = '',
+        moderation = '',
+        players = '',
+        inventory = '',
+        vehicles = '',
+        teleport = '',
+        troll = '',
+        world = '',
+        resources = '',
+        chat = ''
+    },
     modules = {
-        Main = true,
-        Players = true,
-        Teleport = true,
-        Trolls = true,
-        Inventory = true,
-        Misc = true,
-        Vehicle = true,
-        Chat = true,
-        Spectate = true,
-        Resources = true
+        Main = { enabled = true, webhook = 'actions' },
+        Actions = { enabled = true, webhook = 'actions' },
+        Players = { enabled = true, webhook = 'players' },
+        Teleport = { enabled = true, webhook = 'teleport' },
+        Trolls = { enabled = true, webhook = 'troll' },
+        Inventory = { enabled = true, webhook = 'inventory' },
+        Misc = { enabled = true, webhook = 'moderation' },
+        Vehicle = { enabled = true, webhook = 'vehicles' },
+        Chat = { enabled = true, webhook = 'chat' },
+        Spectate = { enabled = true, webhook = 'moderation' },
+        Resources = { enabled = true, webhook = 'resources' }
     }
 }
 

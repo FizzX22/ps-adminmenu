@@ -39,7 +39,6 @@ local function serializeValue(value)
     return tostring(value)
 end
 
-
 local function trimForDiscord(value, maxLength)
     if #value <= maxLength then return value end
     return value:sub(1, maxLength - 3) .. '...'
@@ -63,6 +62,78 @@ local function parseSelectedData(selectedData)
     return parsed
 end
 
+local function resolveModuleSettings(module)
+    local logs = Config.DiscordLogs or {}
+    local modules = logs.modules or {}
+    local moduleSettings = modules[module]
+
+    if moduleSettings == false then
+        return false, nil
+    end
+
+    if type(moduleSettings) == 'table' and moduleSettings.enabled == false then
+        return false, nil
+    end
+
+    local webhooks = logs.webhooks or {}
+    local configuredWebhook = type(moduleSettings) == 'table' and moduleSettings.webhook or nil
+
+    if configuredWebhook and configuredWebhook:find('https://') == 1 then
+        return true, configuredWebhook
+    end
+
+    if configuredWebhook and webhooks[configuredWebhook] and webhooks[configuredWebhook] ~= '' then
+        return true, webhooks[configuredWebhook]
+    end
+
+    if webhooks.default and webhooks.default ~= '' then
+        return true, webhooks.default
+    end
+
+    if logs.webhook and logs.webhook ~= '' then
+        return true, logs.webhook
+    end
+
+    return false, nil
+end
+
+local function getPlayerContext(source)
+    local player = QBCore.Functions.GetPlayer(source)
+    local context = {
+        name = getPlayerNameBySource(source),
+        license = getIdentifierByType(source, 'license'),
+        discord = getIdentifierByType(source, 'discord'),
+        fivem = getIdentifierByType(source, 'fivem'),
+        ip = getIdentifierByType(source, 'ip'),
+    }
+
+    if player then
+        context.citizenid = player.PlayerData.citizenid or 'n/a'
+        context.job = player.PlayerData.job and player.PlayerData.job.name or 'n/a'
+        context.gang = player.PlayerData.gang and player.PlayerData.gang.name or 'n/a'
+    else
+        context.citizenid = 'n/a'
+        context.job = 'n/a'
+        context.gang = 'n/a'
+    end
+
+    return context
+end
+
+local function formatTarget(target)
+    if not target then return 'N/A' end
+
+    local targetSource = tonumber(target)
+    if targetSource then
+        local info = getPlayerContext(targetSource)
+        return trimForDiscord((
+            '%s (%s)\nCID: %s\nDiscord: %s\nLicense: %s'
+        ):format(info.name, targetSource, info.citizenid, info.discord, info.license), 1000)
+    end
+
+    return trimForDiscord(serializeValue(target), 1000)
+end
+
 --- Sends a discord webhook log for admin actions.
 --- @param module string
 --- @param action string
@@ -71,23 +142,11 @@ end
 --- @param extra table|string|nil
 function LogAdminAction(module, action, source, target, extra)
     if not Config.DiscordLogs or not Config.DiscordLogs.enabled then return end
-    if not Config.DiscordLogs.webhook or Config.DiscordLogs.webhook == '' then return end
-    if Config.DiscordLogs.modules and Config.DiscordLogs.modules[module] == false then return end
 
-    local adminName = getPlayerNameBySource(source)
-    local adminLicense = getIdentifierByType(source, 'license')
-    local adminDiscord = getIdentifierByType(source, 'discord')
+    local canLog, webhookUrl = resolveModuleSettings(module)
+    if not canLog or not webhookUrl then return end
 
-    local targetText = 'N/A'
-    if target then
-        local targetSource = tonumber(target)
-        if targetSource then
-            targetText = ('%s (%s)'):format(getPlayerNameBySource(targetSource), targetSource)
-        else
-            targetText = serializeValue(target)
-        end
-    end
-
+    local admin = getPlayerContext(source)
     local extraText = extra and serializeValue(extra) or 'N/A'
     extraText = trimForDiscord(extraText, 900)
 
@@ -101,10 +160,11 @@ function LogAdminAction(module, action, source, target, extra)
                 fields = {
                     { name = 'Action', value = action, inline = true },
                     { name = 'Module', value = module, inline = true },
-                    { name = 'Admin', value = ('%s (%s)'):format(adminName, source), inline = false },
-                    { name = 'Admin License', value = adminLicense, inline = false },
-                    { name = 'Admin Discord', value = adminDiscord, inline = false },
-                    { name = 'Target', value = trimForDiscord(targetText, 900), inline = false },
+                    { name = 'Admin', value = trimForDiscord(('%s (%s)'):format(admin.name, source), 1000), inline = false },
+                    { name = 'Admin IDs', value = trimForDiscord((
+                        'CID: %s\nDiscord: %s\nLicense: %s\nFiveM: %s\nIP: %s\nJob: %s\nGang: %s'
+                    ):format(admin.citizenid, admin.discord, admin.license, admin.fivem, admin.ip, admin.job, admin.gang), 1000), inline = false },
+                    { name = 'Target', value = formatTarget(target), inline = false },
                     { name = 'Details', value = ('```json\n%s\n```'):format(extraText), inline = false },
                 },
                 footer = {
@@ -114,9 +174,14 @@ function LogAdminAction(module, action, source, target, extra)
         }
     }
 
-    PerformHttpRequest(Config.DiscordLogs.webhook, function(err)
-        if err and err ~= 204 and err ~= 200 then
-            print(('[ps-adminmenu] failed to send webhook log (%s - %s): %s'):format(module, action, err))
+    PerformHttpRequest(webhookUrl, function(statusCode, responseBody)
+        if statusCode ~= 204 and statusCode ~= 200 then
+            print(('[ps-adminmenu] failed webhook log (%s - %s). status=%s body=%s'):format(
+                module,
+                action,
+                tostring(statusCode),
+                trimForDiscord(tostring(responseBody or 'n/a'), 600)
+            ))
         end
     end, 'POST', json.encode(payload), { ['Content-Type'] = 'application/json' })
 end
