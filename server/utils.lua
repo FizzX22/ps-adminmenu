@@ -154,19 +154,45 @@ local function getPlayerContext(source)
     return context
 end
 
+local function cleanIdentifier(value)
+    if not value or value == 'n/a' then return 'n/a' end
+    local split = value:match('^[^:]+:(.+)$')
+    return split or value
+end
+
+local function compactActor(context, source)
+    return ('%s (%s) | CID: %s'):format(context.name, source or 'n/a', context.citizenid or 'n/a')
+end
+
+local function buildOutcome(extra)
+    if type(extra) ~= 'table' then return nil end
+
+    local keys = { 'reason', 'amount', 'moneyType', 'item', 'vehicle', 'plate', 'garage', 'bucket', 'state', 'enabled', 'warnId', 'command' }
+    local parts = {}
+
+    for _, key in ipairs(keys) do
+        local value = extra[key]
+        if value ~= nil and value ~= '' then
+            parts[#parts + 1] = ('%s: %s'):format(key, tostring(value))
+        end
+    end
+
+    if #parts == 0 then return nil end
+    return table.concat(parts, ' | ')
+end
+
 local function formatTarget(target)
     if not target then return 'N/A' end
 
     local targetSource = tonumber(target)
     if targetSource then
         local info = getPlayerContext(targetSource)
-        return trimForDiscord((
-            '%s (%s)\nCID: %s\nDiscord: %s\nLicense: %s'
-        ):format(info.name, targetSource, info.citizenid, info.discord, info.license), 1000)
+        return compactActor(info, targetSource)
     end
 
-    return trimForDiscord(serializeValue(target), 1000)
+    return trimForDiscord(serializeValue(target), 300)
 end
+
 
 --- Sends a discord webhook log for admin actions.
 --- @param module string
@@ -181,8 +207,10 @@ function LogAdminAction(module, action, source, target, extra)
     if not canLog or not webhookUrl then return end
 
     local admin = getPlayerContext(source)
-    local extraText = extra and serializeValue(extra) or 'N/A'
-    extraText = trimForDiscord(extraText, 900)
+    local targetText = formatTarget(target)
+    local summary = ('%s did %s on %s'):format(compactActor(admin, source), action, targetText)
+    local outcome = buildOutcome(extra) or 'No extra outcome data.'
+    local detailsText = trimForDiscord(extra and serializeValue(extra) or 'N/A', 250)
 
     local payload = {
         username = Config.DiscordLogs.username,
@@ -190,16 +218,16 @@ function LogAdminAction(module, action, source, target, extra)
         embeds = {
             {
                 title = ('ps-adminmenu | %s'):format(module),
+                description = trimForDiscord(summary, 400),
                 color = Config.DiscordLogs.color,
                 fields = {
-                    { name = 'Action', value = action, inline = true },
-                    { name = 'Module', value = module, inline = true },
-                    { name = 'Admin', value = trimForDiscord(('%s (%s)'):format(admin.name, source), 1000), inline = false },
-                    { name = 'Admin IDs', value = trimForDiscord((
-                        'CID: %s\nDiscord: %s\nLicense: %s\nFiveM: %s\nIP: %s\nJob: %s\nGang: %s'
-                    ):format(admin.citizenid, admin.discord, admin.license, admin.fivem, admin.ip, admin.job, admin.gang), 1000), inline = false },
-                    { name = 'Target', value = formatTarget(target), inline = false },
-                    { name = 'Details', value = ('```json\n%s\n```'):format(extraText), inline = false },
+                    { name = 'Who', value = compactActor(admin, source), inline = false },
+                    { name = 'Target', value = targetText, inline = false },
+                    { name = 'What happened', value = trimForDiscord(outcome, 1000), inline = false },
+                    { name = 'Quick IDs', value = trimForDiscord((
+                        'Discord: %s | License: %s'
+                    ):format(cleanIdentifier(admin.discord), cleanIdentifier(admin.license)), 1000), inline = false },
+                    { name = 'Details', value = detailsText, inline = false },
                 },
                 footer = {
                     text = os.date('%Y-%m-%d %H:%M:%S')
