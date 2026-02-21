@@ -13,6 +13,7 @@ RegisterNetEvent('ps-adminmenu:server:ValidateClientAction', function(key, selec
     local src = source
     if not CheckPerms(src, perms) then return end
     TriggerClientEvent(event, src, key, selectedData)
+    LogAdminAction('Main', 'ValidateClientAction', src, src, { key = key, event = event, selectedData = selectedData, perms = perms })
 end)
 
 RegisterNetEvent('ps-adminmenu:server:ValidateCommand', function(command, perms)
@@ -21,7 +22,9 @@ RegisterNetEvent('ps-adminmenu:server:ValidateCommand', function(command, perms)
     
     if command == 'vector2' or command == 'vector3' or command == 'vector4' or command == 'heading' then
         TriggerClientEvent('ps-adminmenu:client:CopyCoords', src, command)
+        LogAdminAction('Main', 'ValidateCommand', src, src, { command = command, perms = perms })
     elseif command == 'setammo' then
         TriggerClientEvent('ps-adminmenu:client:SetAmmoCommand', src)
+        LogAdminAction('Main', 'ValidateCommand', src, src, { command = command, perms = perms })
     end
 end)

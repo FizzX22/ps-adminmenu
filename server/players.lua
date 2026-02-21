@@ -120,6 +120,7 @@ RegisterNetEvent('ps-adminmenu:server:SetJob', function(data, selectedData)
     end
 
     QBCore.Functions.Notify(src, locale("jobset", name, Job, Grade), 'success', 5000)
+    LogAdminAction('Players', 'SetJob', src, playerId, { job = Job, grade = gradeValue })
 end)
 
 -- Set Gang
@@ -149,6 +150,7 @@ RegisterNetEvent('ps-adminmenu:server:SetGang', function(data, selectedData)
 
     Player.Functions.SetGang(tostring(Gang), tonumber(gradeValue) or gradeValue)
     QBCore.Functions.Notify(src, locale("gangset", name, Gang, Grade), 'success', 5000)
+    LogAdminAction('Players', 'SetGang', src, playerId, { gang = Gang, grade = gradeValue })
 end)
 
 -- Set Perms
@@ -169,6 +171,7 @@ RegisterNetEvent("ps-adminmenu:server:SetPerms", function(data, selectedData)
 
     QBCore.Functions.AddPermission(tPlayer.PlayerData.source, tostring(rank))
     QBCore.Functions.Notify(tPlayer.PlayerData.source, locale("player_perms", name, rank), 'success', 5000)
+    LogAdminAction('Players', 'SetPerms', src, targetId, { rank = rank })
 end)
 
 -- Remove Stress
@@ -187,4 +190,5 @@ RegisterNetEvent("ps-adminmenu:server:RemoveStress", function(data, selectedData
     TriggerClientEvent('ps-adminmenu:client:removeStress', targetId)
 
     QBCore.Functions.Notify(tPlayer.PlayerData.source, locale("removed_stress_player"), 'success', 5000)
+    LogAdminAction('Players', 'RemoveStress', src, targetId, {})
 end)

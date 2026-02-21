@@ -10,6 +10,7 @@ RegisterNetEvent('ps-adminmenu:server:SpectateTarget', function(data, selectedDa
     if spectating[source] then type = "0" end
     TriggerEvent('ps-adminmenu:spectate', player, type == "1", source, data.perms)
     CheckRoutingbucket(source, player)
+    LogAdminAction('Spectate', 'SpectateTarget', source, player, { enabled = type == '1' })
 end)
 
 AddEventHandler('ps-adminmenu:spectate', function(target, on, source, perms)
@@ -38,5 +39,6 @@ RegisterNetEvent('ps-adminmenu:spectate:teleport', function(target)
         local targetCoords = GetEntityCoords(ped)
         SetEntityCoords(GetPlayerPed(source), targetCoords.x, targetCoords.y, targetCoords.z - 10)
         FreezeEntityPosition(GetPlayerPed(source), true)
+        LogAdminAction('Spectate', 'SpectateTeleport', source, target, {})
     end
 end)

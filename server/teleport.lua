@@ -10,6 +10,7 @@ RegisterNetEvent('ps-adminmenu:server:TeleportToPlayer', function(data, selected
 
     CheckRoutingbucket(src, player)
     TriggerClientEvent('ps-adminmenu:client:TeleportToPlayer', src, coords)
+    LogAdminAction('Teleport', 'TeleportToPlayer', src, player, { coords = coords })
 end)
 
 -- Bring Player
@@ -25,4 +26,5 @@ RegisterNetEvent('ps-adminmenu:server:BringPlayer', function(data, selectedData)
 
     CheckRoutingbucket(targetPed, src)
     SetEntityCoords(target, coords)
+    LogAdminAction('Teleport', 'BringPlayer', src, targetPed, { coords = coords })
 end)

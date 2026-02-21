@@ -17,6 +17,7 @@ RegisterNetEvent('ps-adminmenu:server:FreezePlayer', function(data, selectedData
             locale("Frozen",
                 Player.PlayerData.charinfo.firstname ..
                 " " .. Player.PlayerData.charinfo.lastname .. " | " .. Player.PlayerData.citizenid), 'Success', 7500)
+        LogAdminAction('Trolls', 'FreezePlayer', src, target, { frozen = true })
     else
         frozen = false
         FreezeEntityPosition(ped, false)
@@ -24,6 +25,7 @@ RegisterNetEvent('ps-adminmenu:server:FreezePlayer', function(data, selectedData
             locale("deFrozen",
                 Player.PlayerData.charinfo.firstname ..
                 " " .. Player.PlayerData.charinfo.lastname .. " | " .. Player.PlayerData.citizenid), 'Success', 7500)
+        LogAdminAction('Trolls', 'FreezePlayer', src, target, { frozen = false })
     end
     if Player == nil then return QBCore.Functions.Notify(src, locale("not_online"), 'error', 7500) end
 end)
@@ -47,4 +49,5 @@ RegisterNetEvent('ps-adminmenu:server:DrunkPlayer', function(data, selectedData)
         locale("playerdrunk",
             Player.PlayerData.charinfo.firstname ..
             " " .. Player.PlayerData.charinfo.lastname .. " | " .. Player.PlayerData.citizenid), 'Success', 7500)
+    LogAdminAction('Trolls', 'DrunkPlayer', src, target, {})
 end)

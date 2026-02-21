@@ -23,6 +23,7 @@ RegisterNetEvent('ps-adminmenu:server:SaveCar', function(data, mods, vehicle, _,
                 0
             })
         TriggerClientEvent('QBCore:Notify', src, locale("veh_owner"), 'success', 5000)
+        LogAdminAction('Vehicle', 'SaveCar', src, src, { plate = plate, model = vehicle.model })
     else
         TriggerClientEvent('QBCore:Notify', src, locale("u_veh_owner"), 'error', 3000)
     end
@@ -91,6 +92,7 @@ RegisterNetEvent("ps-adminmenu:server:givecar", function(data, selectedData)
             ("%s %s"):format(Player.PlayerData.charinfo.firstname, Player.PlayerData.charinfo.lastname)), "success", 5000)
     QBCore.Functions.Notify(Player.PlayerData.source, locale("givecar.success.target", plate:upper(), garage), "success",
         5000)
+    LogAdminAction('Vehicle', 'GiveCar', src, tsrc, { vehicle = vehmodel, plate = plate:upper(), garage = garage })
 end)
 
 -- Give Car
@@ -119,6 +121,7 @@ RegisterNetEvent("ps-adminmenu:server:SetVehicleState", function(data, selectedD
     MySQL.update('UPDATE player_vehicles SET state = ?, depotprice = ? WHERE plate = ?', { state, 0, plate })
 
     QBCore.Functions.Notify(src, locale("state_changed"), "success", 5000)
+    LogAdminAction('Vehicle', 'SetVehicleState', src, plate, { state = state })
 end)
 
 -- Change Plate
@@ -141,6 +144,8 @@ RegisterNetEvent('ps-adminmenu:server:ChangePlate', function(newPlate, currentPl
     if tableExists('gloveboxitems') then
         MySQL.Sync.execute('UPDATE gloveboxitems SET plate = ? WHERE plate = ?', { newPlate, currentPlate })
     end
+
+    LogAdminAction('Vehicle', 'ChangePlate', source, currentPlate, { newPlate = newPlate })
 end)
 
 lib.callback.register('ps-adminmenu:server:GetVehicleByPlate', function(source, plate)
@@ -161,6 +166,7 @@ RegisterNetEvent('ps-adminmenu:server:FixVehFor', function(data, selectedData)
         TriggerClientEvent('iens:repaira', Player.PlayerData.source)
         TriggerClientEvent('vehiclemod:client:fixEverything', Player.PlayerData.source)
         QBCore.Functions.Notify(src, locale("veh_fixed", name), 'success', 7500)
+        LogAdminAction('Vehicle', 'FixVehFor', src, playerId, {})
     else
         TriggerClientEvent('QBCore:Notify', src, locale("not_online"), "error")
     end

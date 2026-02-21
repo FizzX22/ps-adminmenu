@@ -15,6 +15,7 @@ RegisterNetEvent('ps-adminmenu:server:sendMessageServer', function(message, citi
         end
 
     messages[#messages + 1] = { message = message, citizenid = citizenid, fullname = fullname, time = time }
+    LogAdminAction('Chat', 'StaffMessage', source, 'staff', { message = message, citizenid = citizenid, fullname = fullname })
 end)
 
 

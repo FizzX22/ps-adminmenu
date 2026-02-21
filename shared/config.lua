@@ -6,6 +6,26 @@ Config.ResourcePerms = 'admin' -- permission to control resource(start stop rest
 Config.ShowCommandsPerms = 'admin' -- permission to show all commands
 Config.RenewedPhone = false    -- if you use qb-phone from renewed. (multijob)
 
+Config.DiscordLogs = {
+    enabled = false, -- set true once webhook is configured
+    webhook = '', -- your discord webhook URL
+    username = 'ps-adminmenu',
+    avatarUrl = '',
+    color = 16724736,
+    modules = {
+        Main = true,
+        Players = true,
+        Teleport = true,
+        Trolls = true,
+        Inventory = true,
+        Misc = true,
+        Vehicle = true,
+        Chat = true,
+        Spectate = true,
+        Resources = true
+    }
+}
+
 -- Key Bindings
 Config.Keybindings = true
 Config.AdminKey = "PageDown"

@@ -32,14 +32,17 @@ lib.callback.register('ps-adminmenu:callback:ChangeResourceState', function(sour
     if data.state == "start" then
         StartResource(data.name)
         print("Started " .. data.name)
+        LogAdminAction('Resources', 'ChangeResourceState', source, data.name, { state = data.state })
     elseif data.state == "stop" then
         StopResource(data.name)
         print("Stopped " .. data.name)
+        LogAdminAction('Resources', 'ChangeResourceState', source, data.name, { state = data.state })
     elseif data.state == "restart" then
         StopResource(data.name)
         Wait(200)
         StartResource(data.name)
         print("Restarted " .. data.name)
+        LogAdminAction('Resources', 'ChangeResourceState', source, data.name, { state = data.state })
     end
 
     return resources

@@ -1,7 +1,7 @@
 -- Clear Inventory
 RegisterNetEvent('ps-adminmenu:server:ClearInventory', function(data, selectedData)
     local data = CheckDataFromKey(data)
-    if not data or not CheckPerms(data.perms) then return end
+    if not data or not CheckPerms(source, data.perms) then return end
 
     local src = source
     local player = selectedData["Player"].value
@@ -20,6 +20,7 @@ RegisterNetEvent('ps-adminmenu:server:ClearInventory', function(data, selectedDa
     QBCore.Functions.Notify(src,
         locale("invcleared", Player.PlayerData.charinfo.firstname .. ' ' .. Player.PlayerData.charinfo.lastname),
         'success', 7500)
+    LogAdminAction('Inventory', 'ClearInventory', src, player, {})
 end)
 
 -- Clear Inventory Offline
@@ -40,6 +41,7 @@ RegisterNetEvent('ps-adminmenu:server:ClearInventoryOffline', function(data, sel
         QBCore.Functions.Notify(src,
             locale("invcleared", Player.PlayerData.charinfo.firstname .. ' ' .. Player.PlayerData.charinfo.lastname),
             'success', 7500)
+        LogAdminAction('Inventory', 'ClearInventoryOffline', src, Player.PlayerData.source, { online = true, citizenId = citizenId })
     else
         MySQL.Async.fetchAll("SELECT * FROM players WHERE citizenid = @citizenid", { ['@citizenid'] = citizenId },
             function(result)
@@ -47,6 +49,7 @@ RegisterNetEvent('ps-adminmenu:server:ClearInventoryOffline', function(data, sel
                     MySQL.Async.execute("UPDATE players SET inventory = '{}' WHERE citizenid = @citizenid",
                         { ['@citizenid'] = citizenId })
                     QBCore.Functions.Notify(src, "Player's inventory cleared", 'success', 7500)
+                    LogAdminAction('Inventory', 'ClearInventoryOffline', src, citizenId, { online = false })
                 else
                     QBCore.Functions.Notify(src, locale("player_not_found"), 'error', 7500)
                 end
@@ -57,16 +60,19 @@ end)
 -- Open Inv [ox side]
 RegisterNetEvent('ps-adminmenu:server:OpenInv', function(data)
     exports.ox_inventory:forceOpenInventory(source, 'player', data)
+    LogAdminAction('Inventory', 'OpenInv', source, data, {})
 end)
 
 -- Open Stash [ox side]
 RegisterNetEvent('ps-adminmenu:server:OpenStash', function(data)
     exports.ox_inventory:forceOpenInventory(source, 'stash', data)
+    LogAdminAction('Inventory', 'OpenStash', source, data, {})
 end)
 
 -- Open Trunk [ox side]
 RegisterNetEvent('ps-adminmenu:server:OpenTrunk', function(data)
     exports.ox_inventory:forceOpenInventory(source, 'trunk', data)
+    LogAdminAction('Inventory', 'OpenTrunk', source, data, {})
 end)
 
 -- Give Item
@@ -93,6 +99,7 @@ RegisterNetEvent('ps-adminmenu:server:GiveItem', function(data, selectedData)
     QBCore.Functions.Notify(source,
         locale("give_item", amount .. " " .. item,
             Player.PlayerData.charinfo.firstname .. " " .. Player.PlayerData.charinfo.lastname), "success", 7500)
+    LogAdminAction('Inventory', 'GiveItem', source, target, { item = item, amount = amount })
 end)
 
 -- Give Item to All
@@ -118,4 +125,5 @@ RegisterNetEvent('ps-adminmenu:server:GiveItemAll', function(data, selectedData)
     end
 
     QBCore.Functions.Notify(source, locale("give_item_all", amount .. " " .. item), "success", 7500)
+    LogAdminAction('Inventory', 'GiveItemAll', source, 'all', { item = item, amount = amount, players = #players })
 end)
