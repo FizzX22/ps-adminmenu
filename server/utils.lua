@@ -1,3 +1,37 @@
+
+CreateThread(function()
+    Wait(1500)
+
+    if not Config.DiscordLogs then
+        print('[ps-adminmenu] DiscordLogs config missing. Logging disabled.')
+        return
+    end
+
+    if not Config.DiscordLogs.enabled then
+        print('[ps-adminmenu] Discord webhook logging is disabled (Config.DiscordLogs.enabled = false).')
+        return
+    end
+
+    local hasWebhook = false
+
+    if Config.DiscordLogs.webhook and Config.DiscordLogs.webhook ~= '' then
+        hasWebhook = true
+    end
+
+    if Config.DiscordLogs.webhooks then
+        for _, url in pairs(Config.DiscordLogs.webhooks) do
+            if url and url ~= '' then
+                hasWebhook = true
+                break
+            end
+        end
+    end
+
+    if not hasWebhook then
+        print('[ps-adminmenu] Discord logging enabled but no webhook URL configured. Set Config.DiscordLogs.webhook or Config.DiscordLogs.webhooks.<category>.')
+    end
+end)
+
 local function noPerms(source)
     QBCore.Functions.Notify(source, "You are not Admin or God.", 'error')
 end
@@ -10,6 +44,213 @@ function CheckPerms(source, perms)
     end
 
     return hasPerms
+end
+
+local function getIdentifierByType(source, identifierType)
+    if not source then return "n/a" end
+    local identifier = QBCore.Functions.GetIdentifier(source, identifierType)
+    return identifier or "n/a"
+end
+
+local function getPlayerNameBySource(playerSource)
+    local name = GetPlayerName(playerSource)
+    return name or ('Unknown (%s)'):format(playerSource or 'n/a')
+end
+
+local function serializeValue(value)
+    local valueType = type(value)
+
+    if valueType == 'table' then
+        local success, encoded = pcall(json.encode, value)
+        if success then return encoded end
+        return '[table]'
+    end
+
+    if value == nil then
+        return 'nil'
+    end
+
+    return tostring(value)
+end
+
+local function trimForDiscord(value, maxLength)
+    if #value <= maxLength then return value end
+    return value:sub(1, maxLength - 3) .. '...'
+end
+
+local function parseSelectedData(selectedData)
+    if type(selectedData) ~= 'table' then return {} end
+
+    local parsed = {}
+    for field, data in pairs(selectedData) do
+        if type(data) == 'table' then
+            parsed[field] = {
+                label = data.label,
+                value = data.value
+            }
+        else
+            parsed[field] = data
+        end
+    end
+
+    return parsed
+end
+
+local function resolveModuleSettings(module)
+    local logs = Config.DiscordLogs or {}
+    local modules = logs.modules or {}
+    local moduleSettings = modules[module]
+
+    if moduleSettings == false then
+        return false, nil
+    end
+
+    if type(moduleSettings) == 'table' and moduleSettings.enabled == false then
+        return false, nil
+    end
+
+    local webhooks = logs.webhooks or {}
+    local configuredWebhook = type(moduleSettings) == 'table' and moduleSettings.webhook or nil
+
+    if configuredWebhook and configuredWebhook:find('https://') == 1 then
+        return true, configuredWebhook
+    end
+
+    if configuredWebhook and webhooks[configuredWebhook] and webhooks[configuredWebhook] ~= '' then
+        return true, webhooks[configuredWebhook]
+    end
+
+    if webhooks.default and webhooks.default ~= '' then
+        return true, webhooks.default
+    end
+
+    if logs.webhook and logs.webhook ~= '' then
+        return true, logs.webhook
+    end
+
+    return false, nil
+end
+
+local function getPlayerContext(source)
+    local player = QBCore.Functions.GetPlayer(source)
+    local context = {
+        name = getPlayerNameBySource(source),
+        license = getIdentifierByType(source, 'license'),
+        discord = getIdentifierByType(source, 'discord'),
+        fivem = getIdentifierByType(source, 'fivem'),
+        ip = getIdentifierByType(source, 'ip'),
+    }
+
+    if player then
+        context.citizenid = player.PlayerData.citizenid or 'n/a'
+        context.job = player.PlayerData.job and player.PlayerData.job.name or 'n/a'
+        context.gang = player.PlayerData.gang and player.PlayerData.gang.name or 'n/a'
+    else
+        context.citizenid = 'n/a'
+        context.job = 'n/a'
+        context.gang = 'n/a'
+    end
+
+    return context
+end
+
+local function cleanIdentifier(value)
+    if not value or value == 'n/a' then return 'n/a' end
+    local split = value:match('^[^:]+:(.+)$')
+    return split or value
+end
+
+local function compactActor(context, source)
+    return ('%s (%s) | CID: %s'):format(context.name, source or 'n/a', context.citizenid or 'n/a')
+end
+
+local function buildOutcome(extra)
+    if type(extra) ~= 'table' then return nil end
+
+    local keys = { 'reason', 'amount', 'moneyType', 'item', 'vehicle', 'plate', 'garage', 'bucket', 'state', 'enabled', 'warnId', 'command' }
+    local parts = {}
+
+    for _, key in ipairs(keys) do
+        local value = extra[key]
+        if value ~= nil and value ~= '' then
+            parts[#parts + 1] = ('%s: %s'):format(key, tostring(value))
+        end
+    end
+
+    if #parts == 0 then return nil end
+    return table.concat(parts, ' | ')
+end
+
+local function formatTarget(target)
+    if not target then return 'N/A' end
+
+    local targetSource = tonumber(target)
+    if targetSource then
+        local info = getPlayerContext(targetSource)
+        return compactActor(info, targetSource)
+    end
+
+    return trimForDiscord(serializeValue(target), 300)
+end
+
+
+--- Sends a discord webhook log for admin actions.
+--- @param module string
+--- @param action string
+--- @param source number
+--- @param target number|string|nil
+--- @param extra table|string|nil
+function LogAdminAction(module, action, source, target, extra)
+    if not Config.DiscordLogs or not Config.DiscordLogs.enabled then return end
+
+    local canLog, webhookUrl = resolveModuleSettings(module)
+    if not canLog or not webhookUrl then return end
+
+    local admin = getPlayerContext(source)
+    local targetText = formatTarget(target)
+    local summary = ('%s did %s on %s'):format(compactActor(admin, source), action, targetText)
+    local outcome = buildOutcome(extra) or 'No extra outcome data.'
+    local detailsText = trimForDiscord(extra and serializeValue(extra) or 'N/A', 250)
+
+    local payload = {
+        username = Config.DiscordLogs.username,
+        avatar_url = Config.DiscordLogs.avatarUrl,
+        embeds = {
+            {
+                title = ('ps-adminmenu | %s'):format(module),
+                description = trimForDiscord(summary, 400),
+                color = Config.DiscordLogs.color,
+                fields = {
+                    { name = 'Who', value = compactActor(admin, source), inline = false },
+                    { name = 'Target', value = targetText, inline = false },
+                    { name = 'What happened', value = trimForDiscord(outcome, 1000), inline = false },
+                    { name = 'Quick IDs', value = trimForDiscord((
+                        'Discord: %s | License: %s'
+                    ):format(cleanIdentifier(admin.discord), cleanIdentifier(admin.license)), 1000), inline = false },
+                    { name = 'Details', value = detailsText, inline = false },
+                },
+                footer = {
+                    text = os.date('%Y-%m-%d %H:%M:%S')
+                }
+            }
+        }
+    }
+
+    PerformHttpRequest(webhookUrl, function(statusCode, responseBody)
+        if statusCode ~= 204 and statusCode ~= 200 then
+            print(('[ps-adminmenu] failed webhook log (%s - %s). status=%s body=%s'):format(
+                module,
+                action,
+                tostring(statusCode),
+                trimForDiscord(tostring(responseBody or 'n/a'), 600)
+            ))
+        end
+    end, 'POST', json.encode(payload), { ['Content-Type'] = 'application/json' })
+end
+
+function LogAdminActionFromSelection(module, action, source, selectedData, targetKey)
+    local target = targetKey and selectedData and selectedData[targetKey] and selectedData[targetKey].value or nil
+    LogAdminAction(module, action, source, target, parseSelectedData(selectedData))
 end
 
 function CheckDataFromKey(key)

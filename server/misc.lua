@@ -60,6 +60,7 @@ RegisterNetEvent('ps-adminmenu:server:BanPlayer', function(data, selectedData)
 
     if source and GetPlayerName(source) then
         QBCore.Functions.Notify(source, locale("playerbanned", player, banTime, reason), 'success', 7500)
+        LogAdminAction('Misc', 'BanPlayer', source, player, { reason = reason, duration = time, expire = expire })
     end
 end)
 
@@ -84,6 +85,7 @@ RegisterNetEvent('ps-adminmenu:server:WarnPlayer', function(data, selectedData)
                 reason,
                 warnId
             })
+        LogAdminAction('Misc', 'WarnPlayer', source, target.PlayerData.source, { reason = reason, warnId = warnId })
     else
         TriggerClientEvent('QBCore:Notify', source, locale("not_online"), 'error')
     end
@@ -102,6 +104,7 @@ RegisterNetEvent('ps-adminmenu:server:KickPlayer', function(data, selectedData)
     end
 
     DropPlayer(target.PlayerData.source, locale("kicked") .. '\n' .. locale("reason") .. reason)
+    LogAdminAction('Misc', 'KickPlayer', src, target.PlayerData.source, { reason = reason })
 end)
 
 -- Revive Player
@@ -114,6 +117,7 @@ RegisterNetEvent('ps-adminmenu:server:Revive', function(data, selectedData)
     else
         TriggerClientEvent('hospital:client:Revive', player)
     end
+    LogAdminAction('Misc', 'Revive', source, player, { mode = 'single' })
 end)
 
 -- Revive All
@@ -126,6 +130,7 @@ RegisterNetEvent('ps-adminmenu:server:ReviveAll', function(data)
     else
         TriggerClientEvent('hospital:client:Revive', -1)
     end
+    LogAdminAction('Misc', 'ReviveAll', source, 'all', {})
 end)
 
 -- Revive Radius
@@ -151,6 +156,7 @@ RegisterNetEvent('ps-adminmenu:server:ReviveRadius', function(data)
             end
         end
     end
+    LogAdminAction('Misc', 'ReviveRadius', source, 'radius_15', {})
 end)
 
 -- Set RoutingBucket
@@ -169,6 +175,7 @@ RegisterNetEvent('ps-adminmenu:server:SetBucket', function(data, selectedData)
 
     SetPlayerRoutingBucket(player, bucket)
     QBCore.Functions.Notify(src, locale("bucket_set_for_target", player, bucket), 'success', 7500)
+    LogAdminAction('Misc', 'SetBucket', src, player, { bucket = bucket })
 end)
 
 -- Get RoutingBucket
@@ -181,6 +188,7 @@ RegisterNetEvent('ps-adminmenu:server:GetBucket', function(data, selectedData)
     local currentBucket = GetPlayerRoutingBucket(player)
 
     QBCore.Functions.Notify(src, locale("bucket_get", player, currentBucket), 'success', 7500)
+    LogAdminAction('Misc', 'GetBucket', src, player, { currentBucket = currentBucket })
 end)
 
 -- Give Money
@@ -201,6 +209,7 @@ RegisterNetEvent('ps-adminmenu:server:GiveMoney', function(data, selectedData)
     QBCore.Functions.Notify(src,
         locale((moneyType == "crypto" and "give_money_crypto" or "give_money"), tonumber(amount),
             Player.PlayerData.charinfo.firstname .. " " .. Player.PlayerData.charinfo.lastname), "success")
+    LogAdminAction('Misc', 'GiveMoney', src, target, { amount = tonumber(amount), moneyType = moneyType })
 end)
 
 -- Give Money to all
@@ -218,6 +227,7 @@ RegisterNetEvent('ps-adminmenu:server:GiveMoneyAll', function(data, selectedData
         QBCore.Functions.Notify(src,
             locale((moneyType == "crypto" and "give_money_all_crypto" or "give_money_all"), tonumber(amount)), "success")
     end
+    LogAdminAction('Misc', 'GiveMoneyAll', src, 'all', { amount = tonumber(amount), moneyType = moneyType, players = #players })
 end)
 
 -- Take Money
@@ -243,6 +253,7 @@ RegisterNetEvent('ps-adminmenu:server:TakeMoney', function(data, selectedData)
     QBCore.Functions.Notify(src,
         locale((moneyType == "crypto" and "take_money_crypto" or "take_money"), tonumber(amount) .. "$",
             Player.PlayerData.charinfo.firstname .. " " .. Player.PlayerData.charinfo.lastname), "success")
+    LogAdminAction('Misc', 'TakeMoney', src, target, { amount = tonumber(amount), moneyType = moneyType })
 end)
 
 -- Blackout
@@ -253,6 +264,7 @@ RegisterNetEvent('ps-adminmenu:server:ToggleBlackout', function(data)
     Blackout = not Blackout
 
     local src = source
+    LogAdminAction('Misc', 'ToggleBlackout', src, 'global', { enabled = Blackout })
 
     if Blackout then
         TriggerClientEvent('QBCore:Notify', src, locale("blackout", "enabled"), 'primary')
@@ -274,6 +286,7 @@ RegisterNetEvent('ps-adminmenu:server:CuffPlayer', function(data, selectedData)
 
     TriggerClientEvent('ps-adminmenu:client:ToggleCuffs', target)
     QBCore.Functions.Notify(source, locale("toggled_cuffs"), 'success')
+    LogAdminAction('Misc', 'CuffPlayer', source, target, {})
 end)
 
 -- Give Clothing Menu
@@ -293,6 +306,7 @@ RegisterNetEvent('ps-adminmenu:server:ClothingMenu', function(data, selectedData
     end
 
     TriggerClientEvent('qb-clothing:client:openMenu', target)
+    LogAdminAction('Misc', 'ClothingMenu', src, target, {})
 end)
 
 -- Set Ped
@@ -314,4 +328,5 @@ RegisterNetEvent("ps-adminmenu:server:setPed", function(data, selectedData)
     end
 
     TriggerClientEvent("ps-adminmenu:client:setPed", Player.PlayerData.source, ped)
+    LogAdminAction('Misc', 'SetPed', src, Player.PlayerData.source, { ped = ped })
 end)

@@ -50,6 +50,7 @@ RegisterNUICallback("clickButton", function(data)
 		ExecuteCommand(data.event)
 	end
 
+	TriggerServerEvent('ps-adminmenu:server:LogMenuAction', key, selectedData)
 	Log("Action Used: " .. key,
             PlayerData.name ..
             " (" ..
